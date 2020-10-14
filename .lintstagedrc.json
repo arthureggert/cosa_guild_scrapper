@@ -1,0 +1,5 @@
+{
+  "*.js?(x)": ["eslint ./src/ --ext .js,.jsx,.ts,.tsx --fix"],
+  "*.ts?(x)": ["eslint ./src/ --ext .js,.jsx,.ts,.tsx --fix"],
+  "*.+(json|css|md)": ["prettier --write"]
+}

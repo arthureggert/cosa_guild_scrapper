@@ -1,13 +1,18 @@
 {
-  "name": "node-typescript-boilerplate",
-  "version": "0.0.0",
-  "description": "Minimalistic boilerplate to quick-start Node.js development in TypeScript.",
-  "engines": {
-    "node": ">= 12.13 <13"
+  "author": "Arthur Eggert <opa.roa@gmail.com>",
+  "dependencies": {
+    "axios": "^0.20.0",
+    "cheerio": "^1.0.0-rc.3",
+    "date-fns": "^2.16.1",
+    "puppeteer": "^5.3.1",
+    "tslib": "~2.0.1"
   },
+  "description": "Minimalistic boilerplate to quick-start Node.js development in TypeScript.",
   "devDependencies": {
+    "@types/cheerio": "^0.22.22",
     "@types/jest": "~26.0.10",
     "@types/node": "~12.12",
+    "@types/puppeteer": "^3.0.2",
     "@typescript-eslint/eslint-plugin": "~3.9.1",
     "@typescript-eslint/parser": "~3.9.1",
     "eslint": "~7.7.0",
@@ -18,21 +23,28 @@
     "rimraf": "~3.0.2",
     "ts-jest": "~26.2.0",
     "tsutils": "~3.17.0",
-    "typescript": "~4.0.2"
+    "typescript": "~4.0.2",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.3.0",
+    "pretty-quick": "^3.0.0"
   },
+  "engines": {
+    "node": ">= 12.13 <13"
+  },
+  "license": "Apache-2.0",
+  "name": "cosa_guild_scrapper",
   "scripts": {
     "clean": "rimraf coverage build tmp",
-    "build": "tsc -p tsconfig.release.json",
+    "build:js": "tsc -p tsconfig.release.json",
+    "build:types": "tsc  -p tsconfig.release.json --emitDeclarationOnly",
     "build:watch": "tsc -w -p tsconfig.release.json",
+    "build": "yarn build:types && yarn build:js",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "run": "yarn clean && yarn build && node build/src/main.js"
   },
-  "author": "Jakub Synowiec <github@jakubsynowiec.info>",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "tslib": "~2.0.1"
-  },
+  "version": "0.0.0",
   "volta": {
     "node": "12.18.3",
     "npm": "6.14.5"
