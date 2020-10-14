@@ -36,7 +36,7 @@ async function getEvents(page: Page): Promise<User[]> {
   const content: string = await getContent(page, buildCosaGuildURL());
 
   const transformTextToDate = (when: string): string => {
-    let date = null;
+    let date;
     if (when.includes('hoje')) {
       date = startOfToday();
     } else if (when.includes('ontem')) {
