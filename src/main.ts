@@ -2,11 +2,17 @@ import { Browser, launch, Page } from 'puppeteer';
 import { load } from 'cheerio';
 import { format, startOfToday, startOfYesterday, subDays } from 'date-fns';
 
-type UserAction = {
+type Partner = {
+  name: string;
+  url: string;
+};
+
+type User = {
   who: string;
   when: string;
   what: string;
-  charUrl: string;
+  url: string;
+  partner?: Partner;
 };
 
 function buildURL(link: string): string {
@@ -20,27 +26,15 @@ function buildCosaGuildURL(): string {
 }
 
 async function getContent(page: Page, url: string): Promise<string> {
-  await page.goto(url);
+  await page.goto(url, {
+    waitUntil: 'networkidle2',
+  });
   return page.content();
 }
 
-function getEventsHtmlContent(html: string): string[] {
-  const selector = `div[class="ak-character-actions"] > 
-                    div[class="ak-actions"] > 
-                    div[class="ak-actions-list"] > 
-                    div[class*="ak-container ak-content-list"] > 
-                    div[class="ak-list-element"]`;
+async function getEvents(page: Page): Promise<User[]> {
+  const content: string = await getContent(page, buildCosaGuildURL());
 
-  const $ = load(html);
-  const events: string[] = [];
-  $(selector).each(function (_, element) {
-    const event: string = $(element).html() as string;
-    events.push(event);
-  });
-  return events;
-}
-
-function transformHtmlToEvent(events: string[]): UserAction[] {
   const transformTextToDate = (when: string): string => {
     let date = null;
     if (when.includes('hoje')) {
@@ -54,30 +48,61 @@ function transformHtmlToEvent(events: string[]): UserAction[] {
     return format(date, 'dd/MM/yyyy');
   };
 
-  return events.map((event) => {
-    const $ = load(event);
+  const selector = `div[class="ak-character-actions"] > 
+                    div[class="ak-actions"] > 
+                    div[class="ak-actions-list"] > 
+                    div[class*="ak-container ak-content-list"] > 
+                    div[class="ak-list-element"]`;
+
+  const $ = load(content);
+  const events: User[] = [];
+  $(selector).each(function (_, element) {
+    const $ = load(element);
     const when = transformTextToDate($('span[class="date"]').text());
     const action = $('a[class="lien_action"]');
     const who = action.text();
-    const charUrl = `${buildURL(action.attr('href') as string)}`;
+    const url = `${buildURL(action.attr('href') as string)}`;
     const what = $('.ak-title').text().includes('uniu') ? 'ENTROU' : 'SAIU';
 
-    return {
+    events.push({
       who,
       when,
       what,
-      charUrl,
-    };
+      url,
+    });
   });
+  return events;
+}
+
+async function getPartner(events: User[], page: Page) {
+  const eventsWithPartner = [];
+  for (let i = 0; i < events.length; i += 1) {
+    let partner = undefined;
+    const event = events[i];
+    const content = await getContent(page, event.url);
+    const $ = load(content);
+    const spousename = $('.ak-infos-spousename');
+    if (spousename.text()) {
+      partner = {
+        name: spousename.text(),
+        url: buildURL(`/pt/mmorpg/comunidade/anuarios/paginas-personagens/${spousename.attr('href')}`),
+      };
+    }
+    eventsWithPartner.push({
+      ...event,
+      partner,
+    });
+  }
+  return eventsWithPartner;
 }
 
 async function main() {
   const browser: Browser = await launch();
   try {
     const page: Page = await browser.newPage();
-    const content: string = await getContent(page, buildCosaGuildURL());
-    const events: UserAction[] = transformHtmlToEvent(getEventsHtmlContent(content));
-    console.log(events);
+    const events: User[] = await getEvents(page);
+    const eventsWithPartner: User[] = await getPartner(events, page);
+    console.log(eventsWithPartner);
   } catch (e) {
     console.error(e);
   } finally {
