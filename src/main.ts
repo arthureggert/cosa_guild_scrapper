@@ -6,7 +6,7 @@ type UserAction = {
   who: string;
   when: string;
   what: string;
-  link: string;
+  charUrl: string;
 };
 
 function buildURL(link: string): string {
@@ -59,14 +59,14 @@ function transformHtmlToEvent(events: string[]): UserAction[] {
     const when = transformTextToDate($('span[class="date"]').text());
     const action = $('a[class="lien_action"]');
     const who = action.text();
-    const link = `${buildURL(action.attr('href') as string)}`;
+    const charUrl = `${buildURL(action.attr('href') as string)}`;
     const what = $('.ak-title').text().includes('uniu') ? 'ENTROU' : 'SAIU';
 
     return {
       who,
       when,
       what,
-      link,
+      charUrl,
     };
   });
 }
@@ -76,7 +76,7 @@ async function main() {
   try {
     const page: Page = await browser.newPage();
     const content: string = await getContent(page, buildCosaGuildURL());
-    const events = transformHtmlToEvent(getEventsHtmlContent(content));
+    const events: UserAction[] = transformHtmlToEvent(getEventsHtmlContent(content));
     console.log(events);
   } catch (e) {
     console.error(e);
