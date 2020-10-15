@@ -40,7 +40,7 @@
     "build:watch": "tsc -w -p tsconfig.release.json",
     "build": "yarn build:types && yarn build:js",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "jest --coverage",
+    "test": "jest --coverage --passWithNoTests",
     "test:watch": "jest --watch",
     "run": "yarn clean && yarn build && node build/src/main.js"
   },
