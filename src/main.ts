@@ -1,6 +1,9 @@
 import { Browser, launch, Page } from 'puppeteer';
 import { load } from 'cheerio';
 import { format, startOfToday, startOfYesterday, subDays } from 'date-fns';
+import { writeFileSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 
 type Partner = {
   name: string;
@@ -15,14 +18,26 @@ type User = {
   partner?: Partner;
 };
 
+const guilds = [
+  {
+    fileName: `cosa_${format(Date.now(), 'yyyy.MM.dd')}.json`,
+    url: buildCosaGuildURL(),
+  },
+  {
+    fileName: `cosa2_${format(Date.now(), 'yyyy.MM.dd')}.json`,
+    url: buildCosaGuildURL(false),
+  },
+];
+
 function buildURL(link: string): string {
   const ROOT_URL = 'https://www.dofus.com';
   return `${ROOT_URL}${link}`;
 }
 
-function buildCosaGuildURL(): string {
-  const URl_COSA = `/pt/mmorpg/comunidade/anuarios/paginas-guildas/201900202-cosa-nostra`;
-  return buildURL(URl_COSA);
+function buildCosaGuildURL(main = true): string {
+  const URL_COSA = `/pt/mmorpg/comunidade/anuarios/paginas-guildas/201900202-cosa-nostra`;
+  const URL_COSA2 = '/pt/mmorpg/comunidade/anuarios/paginas-guildas/156600202-cosa-nostra-ii';
+  return buildURL(main ? URL_COSA : URL_COSA2);
 }
 
 async function getContent(page: Page, url: string): Promise<string> {
@@ -32,8 +47,8 @@ async function getContent(page: Page, url: string): Promise<string> {
   return page.content();
 }
 
-async function getEvents(page: Page): Promise<User[]> {
-  const content: string = await getContent(page, buildCosaGuildURL());
+async function getEvents(page: Page, url: string = buildCosaGuildURL()): Promise<User[]> {
+  const content: string = await getContent(page, url);
 
   const transformTextToDate = (when: string): string => {
     let date;
@@ -48,10 +63,10 @@ async function getEvents(page: Page): Promise<User[]> {
     return format(date, 'dd/MM/yyyy');
   };
 
-  const selector = `div[class="ak-character-actions"] > 
-                    div[class="ak-actions"] > 
-                    div[class="ak-actions-list"] > 
-                    div[class*="ak-container ak-content-list"] > 
+  const selector = `div[class="ak-character-actions"] >
+                    div[class="ak-actions"] >
+                    div[class="ak-actions-list"] >
+                    div[class*="ak-container ak-content-list"] >
                     div[class="ak-list-element"]`;
 
   const $ = load(content);
@@ -64,12 +79,14 @@ async function getEvents(page: Page): Promise<User[]> {
     const url = `${buildURL(action.attr('href') as string)}`;
     const what = $('.ak-title').text().includes('uniu') ? 'ENTROU' : 'SAIU';
 
-    events.push({
-      who,
-      when,
-      what,
-      url,
-    });
+    if (who) {
+      events.push({
+        who,
+        when,
+        what,
+        url,
+      });
+    }
   });
   return events;
 }
@@ -100,9 +117,12 @@ async function main() {
   const browser: Browser = await launch();
   try {
     const page: Page = await browser.newPage();
-    const events: User[] = await getEvents(page);
-    const eventsWithPartner: User[] = await getPartner(events, page);
-    console.log(eventsWithPartner);
+    for (let index = 0; index < guilds.length; index++) {
+      const { fileName, url } = guilds[index];
+      const events: User[] = await getEvents(page, url);
+      const eventsWithPartner: User[] = await getPartner(events, page);
+      writeFileSync(join(homedir(), 'Desktop', fileName), JSON.stringify(eventsWithPartner));
+    }
   } catch (e) {
     console.error(e);
   } finally {
